@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Точка">
 <meta name="theme-color" content="#111318">
-<title>Точка — навигатор</title>
+<title>Точка</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
 :root{
@@ -22,10 +22,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
 #map{position:absolute;inset:0}
 .maplibregl-ctrl-attrib{font-size:10px}
 
-/* Верх */
 #top{position:absolute;left:12px;right:12px;top:calc(var(--top) + 10px);z-index:5;display:flex;flex-direction:column;gap:8px}
 .search{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:0 14px;height:52px}
-.search input{flex:1;border:0;outline:0;background:transparent;color:var(--text);font-size:17px;height:100%}
+.search input{flex:1;border:0;outline:0;background:transparent;color:var(--text);font-size:17px;height:100%;min-width:0}
 .search .clear{border:0;background:transparent;color:var(--muted);font-size:20px;display:none}
 #results{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;display:none;max-height:50vh;overflow-y:auto}
 .res{padding:12px 16px;border-bottom:1px solid var(--line)}
@@ -34,18 +33,16 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
 .res span{font-size:13px;color:var(--muted)}
 #status{align-self:flex-start;color:#fff;font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;background:#6b7280;box-shadow:var(--shadow);transition:background .4s}
 
-/* Навигационный баннер */
 #banner{display:none;background:#0f5132;color:#fff;border-radius:18px;box-shadow:var(--shadow);padding:14px 16px;align-items:center;gap:14px}
 #banner .arrow{font-size:40px;line-height:1;width:48px;text-align:center}
 #banner .dist{font-size:28px;font-weight:800}
 #banner .txt{font-size:16px;opacity:.95}
 
-/* Кнопки справа */
 #fabs{position:absolute;right:12px;z-index:5;display:flex;flex-direction:column;gap:10px;bottom:calc(var(--bottom) + 24px);transition:bottom .25s}
 .fab{width:50px;height:50px;border-radius:50%;border:0;background:var(--card);color:var(--text);box-shadow:var(--shadow);font-size:22px;display:flex;align-items:center;justify-content:center}
+.fab.txt{font-size:15px;font-weight:800}
 .fab.on{color:var(--accent)}
 
-/* Нижняя карточка */
 #sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.2);padding:10px 18px calc(var(--bottom) + 18px);transform:translateY(110%);transition:transform .25s}
 #sheet.open{transform:translateY(0)}
 #sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
@@ -53,23 +50,34 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
 #sheet p{margin:0 0 14px;color:var(--muted);font-size:14px}
 .row{display:flex;gap:10px}
 .btn{flex:1;border:0;border-radius:14px;padding:15px;font-size:17px;font-weight:700;background:var(--accent);color:#fff}
+.btn:disabled{opacity:.6}
 .btn.sec{background:var(--line);color:var(--text);flex:0 0 auto;padding:15px 18px}
 .btn.red{background:#dc2626}
 .big{font-size:26px;font-weight:800;margin-bottom:2px}
 
-/* Моя точка */
 .me{width:26px;height:26px;position:relative}
 .me .cone{position:absolute;left:50%;top:50%;width:0;height:0;transform:translate(-50%,-100%);border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:34px solid rgba(37,99,235,.35);display:none}
 .me .d{position:absolute;inset:4px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.4)}
 .me.dr .d{background:#dc2626}.me.dr .cone{border-bottom-color:rgba(220,38,38,.35)}
 .me.wifi .d{background:#ea580c}
 
-/* Экран приветствия */
-#intro{position:absolute;inset:0;z-index:20;background:var(--card);display:flex;flex-direction:column;justify-content:center;padding:calc(var(--top) + 30px) 28px calc(var(--bottom) + 30px);gap:14px}
+#intro{position:absolute;inset:0;z-index:20;background:var(--card);display:flex;flex-direction:column;justify-content:center;overflow-y:auto;padding:calc(var(--top) + 14px) 28px calc(var(--bottom) + 30px);gap:14px}
 #intro h1{margin:0;font-size:46px;text-align:center}
 #intro .lead{text-align:center;font-size:17px;line-height:1.45;color:var(--muted)}
-#intro ul{list-style:none;padding:0;margin:10px 0 20px;font-size:16px;line-height:2}
+#intro ul{list-style:none;padding:0;margin:10px 0 18px;font-size:16px;line-height:1.4}
+#intro li{display:flex;gap:10px;margin:10px 0}
+#intro .btn{flex:0 0 auto}
 #intro small{text-align:center;color:var(--muted);font-size:13px;line-height:1.4}
+.langs{align-self:flex-end;margin-bottom:auto;display:flex;flex:0 0 auto;background:var(--line);border-radius:999px;padding:3px}
+#intro small{margin-bottom:auto}
+.langs button{border:0;background:transparent;color:var(--text);font-weight:700;font-size:14px;padding:7px 14px;border-radius:999px}
+.langs button.on{background:var(--accent);color:#fff}
+#auth{display:none;flex-direction:column;gap:10px}
+#auth input{height:52px;border-radius:14px;border:1px solid var(--line);background:transparent;color:var(--text);padding:0 14px;font-size:17px;outline:0}
+#auth input:focus{border-color:var(--accent)}
+#authErr{color:#dc2626;font-size:14px;min-height:18px;text-align:center}
+.authlinks{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-top:4px}
+.authlinks a{color:var(--accent);cursor:pointer}
 
 #toast{position:absolute;left:50%;top:calc(var(--top) + 140px);transform:translateX(-50%);z-index:30;background:rgba(17,19,24,.9);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;display:none;max-width:85%;text-align:center}
 </style>
@@ -80,60 +88,161 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
 <div id="top">
   <div class="search" id="searchBox">
     <span>🔎</span>
-    <input id="q" type="search" placeholder="Куда едем? Адрес или место" autocomplete="off" enterkeyhint="search">
-    <button class="clear" id="clear" aria-label="Очистить">✕</button>
+    <input id="q" type="search" data-i18n-ph="searchPh" autocomplete="off" enterkeyhint="search">
+    <button class="clear" id="clear" aria-label="✕">✕</button>
   </div>
   <div id="results"></div>
   <div id="banner"><div class="arrow" id="bArrow">↑</div><div><div class="dist" id="bDist">—</div><div class="txt" id="bTxt">—</div></div></div>
-  <div id="status">Ищу позицию…</div>
+  <div id="status"></div>
 </div>
 
 <div id="fabs">
-  <button class="fab" id="voice" aria-label="Голос">🔊</button>
-  <button class="fab" id="north" aria-label="На север">🧭</button>
-  <button class="fab" id="locate" aria-label="Где я">➤</button>
+  <button class="fab" id="acct" aria-label="Account" style="display:none">👤</button>
+  <button class="fab txt" id="langFab" aria-label="Language">UA</button>
+  <button class="fab" id="voice" aria-label="Voice">🔊</button>
+  <button class="fab" id="north" aria-label="North">🧭</button>
+  <button class="fab" id="locate" aria-label="Locate">➤</button>
 </div>
 
 <div id="sheet"><div class="grab"></div><div id="sheetBody"></div></div>
 
 <div id="intro">
+  <div class="langs"><button data-lang="uk">UA</button><button data-lang="ru">RU</button></div>
   <h1>📍 Точка</h1>
-  <div class="lead">Навигатор, который не теряет вас во время тревоги, когда глушат и подменяют GPS.</div>
+  <div class="lead" data-i18n="lead"></div>
   <ul>
-    <li>🔎 Поиск адресов и мест</li>
-    <li>🚗 Маршруты с голосовыми подсказками</li>
-    <li>🛡 Отбрасывает ложные координаты</li>
-    <li>📶 Позиция по Wi-Fi и вышкам при глушении</li>
-    <li>🧭 Ведёт по маршруту, даже если сигнала нет</li>
+    <li><span>🔎</span><span data-i18n="f1"></span></li>
+    <li><span>🚗</span><span data-i18n="f2"></span></li>
+    <li><span>🛡</span><span data-i18n="f3"></span></li>
+    <li><span>📶</span><span data-i18n="f4"></span></li>
+    <li><span>🧭</span><span data-i18n="f5"></span></li>
   </ul>
-  <button class="btn" id="startBtn">Начать</button>
-  <small>Разрешите доступ к геолокации и компасу.<br>Держите Wi-Fi включённым — подключаться к сети не нужно.</small>
+  <div id="auth">
+    <input id="email" type="email" data-i18n-ph="emailPh" autocomplete="email" inputmode="email">
+    <input id="pass" type="password" data-i18n-ph="passPh" autocomplete="current-password">
+    <div id="authErr"></div>
+    <button class="btn" id="authBtn"></button>
+    <div class="authlinks"><a id="toggleMode"></a><a id="forgot" data-i18n="forgot"></a></div>
+  </div>
+  <button class="btn" id="startBtn" data-i18n="start"></button>
+  <small data-i18n="hint"></small>
 </div>
 
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 (function(){
 "use strict";
 const $=s=>document.querySelector(s);
+
+/* ================= Настройки ================= */
+// Вставьте сюда конфиг из Firebase Console. Пока null — вход не требуется.
+const FIREBASE_CONFIG=null;
+
 const CFG={maxSpeed:70,drMax:120000,bbox:[22,44,40.3,52.5],center:[30.7233,46.4825],
   style:"https://tiles.openfreemap.org/styles/liberty",
   search:"https://photon.komoot.io/api/",
   route:"https://router.project-osrm.org/route/v1/driving/"};
 
-/* ---------- Геометрия ---------- */
+/* ================= Языки ================= */
+const T={
+ uk:{
+  voice:"uk-UA",locale:"uk-UA",
+  searchPh:"Куди їдемо? Адреса або місце",
+  lead:"Навігатор, який не губить вас під час тривоги, коли глушать і підміняють GPS.",
+  f1:"Пошук адрес і місць",f2:"Маршрути з голосовими підказками",f3:"Відкидає фальшиві координати",
+  f4:"Позиція за Wi-Fi і вежами під час глушіння",f5:"Веде за маршрутом, навіть якщо сигналу немає",
+  start:"Почати",hint:"Дозвольте доступ до геолокації та компаса. Тримайте Wi-Fi увімкненим — підключатися до мережі не потрібно.",
+  emailPh:"Електронна пошта",passPh:"Пароль (мінімум 6 символів)",
+  login:"Увійти",signup:"Створити акаунт",toSignup:"Немає акаунта? Реєстрація",toLogin:"Вже є акаунт? Увійти",
+  forgot:"Забули пароль?",enterEmail:"Спочатку введіть пошту",resetSent:"Лист для скидання пароля надіслано",
+  errs:{"auth/invalid-email":"Невірний формат пошти","auth/missing-password":"Введіть пароль","auth/weak-password":"Пароль — мінімум 6 символів","auth/email-already-in-use":"Ця пошта вже зареєстрована — натисніть «Увійти»","auth/invalid-credential":"Невірна пошта або пароль","auth/wrong-password":"Невірна пошта або пароль","auth/user-not-found":"Такої пошти немає — зареєструйтеся","auth/too-many-requests":"Забагато спроб, зачекайте трохи","auth/network-request-failed":"Немає інтернету"},
+  err:"Помилка: ",
+  searching:"Шукаю позицію…",gps:"🛰 GPS у нормі",wifi:"📡 GPS заглушено — за Wi-Fi/вежами",
+  spoof:"⚠️ Підміну GPS відкинуто — веду ",noSig:"🧭 Немає сигналу — веду ",byRoute:"за маршрутом",byCompass:"за компасом",
+  geoDenied:"Немає доступу до геолокації: Налаштування → Приватність → Служби геолокації → Safari",
+  geoNone:"Геолокація недоступна в цьому браузері",
+  noPos:"Позицію ще не визначено",waitPos:"Спочатку дочекайтеся своєї позиції",building:"Будую маршрут…",
+  noRoute:"Маршрут не знайдено",noRouteNet:"Немає зв'язку з сервером маршрутів",rerouted:"Маршрут перебудовано",
+  noSearch:"Немає зв'язку з пошуком",nothing:"Нічого не знайдено",noName:"Без назви",pointOnMap:"Точка на карті",
+  fromYou:" від вас",route:"🚗 Маршрут",go:"▶ Поїхали",goVoice:"Поїхали.",finish:"Завершити",arrivalAt:"прибуття о ",
+  arrived:"Ви прибули",arrivedToast:"Ви прибули 🏁",voiceOn:"Голос увімкнено",account:"Акаунт",logout:"Вийти",
+  min:"хв",h:"год",m:"м",km:"км",in:"Через ",
+  dirs:{"left":"ліворуч","right":"праворуч","slight left":"плавно ліворуч","slight right":"плавно праворуч","sharp left":"різко ліворуч","sharp right":"різко праворуч","straight":"прямо","uturn":"на розворот"},
+  on:" на ",depart:"Почніть рух",round:(e)=>"На колі — "+(e?e+"-й з'їзд":"з'їзд"),exitRound:"З'їжджайте з кола",
+  fork:(l)=>"Тримайтеся "+(l?"лівіше":"правіше"),merge:"Перелаштуйтеся",onRamp:"Заїжджайте на естакаду",
+  offRamp:(l)=>"З'їжджайте "+(l?"ліворуч":"праворуч"),endRoad:(d)=>"В кінці дороги "+(d||"поверніть"),
+  cont:"Продовжуйте прямо",keep:(d)=>"Тримайтеся "+d,uturn:"Розверніться",straight:"Прямо",turn:(d)=>"Поверніть "+d
+ },
+ ru:{
+  voice:"ru-RU",locale:"ru-RU",
+  searchPh:"Куда едем? Адрес или место",
+  lead:"Навигатор, который не теряет вас во время тревоги, когда глушат и подменяют GPS.",
+  f1:"Поиск адресов и мест",f2:"Маршруты с голосовыми подсказками",f3:"Отбрасывает ложные координаты",
+  f4:"Позиция по Wi-Fi и вышкам при глушении",f5:"Ведёт по маршруту, даже если сигнала нет",
+  start:"Начать",hint:"Разрешите доступ к геолокации и компасу. Держите Wi-Fi включённым — подключаться к сети не нужно.",
+  emailPh:"Электронная почта",passPh:"Пароль (минимум 6 символов)",
+  login:"Войти",signup:"Создать аккаунт",toSignup:"Нет аккаунта? Регистрация",toLogin:"Уже есть аккаунт? Войти",
+  forgot:"Забыли пароль?",enterEmail:"Сначала введите почту",resetSent:"Письмо для сброса пароля отправлено",
+  errs:{"auth/invalid-email":"Неверный формат почты","auth/missing-password":"Введите пароль","auth/weak-password":"Пароль — минимум 6 символов","auth/email-already-in-use":"Эта почта уже зарегистрирована — нажмите «Войти»","auth/invalid-credential":"Неверная почта или пароль","auth/wrong-password":"Неверная почта или пароль","auth/user-not-found":"Такой почты нет — зарегистрируйтесь","auth/too-many-requests":"Слишком много попыток, подождите немного","auth/network-request-failed":"Нет интернета"},
+  err:"Ошибка: ",
+  searching:"Ищу позицию…",gps:"🛰 GPS в норме",wifi:"📡 GPS заглушен — по Wi-Fi/вышкам",
+  spoof:"⚠️ Подмена GPS отброшена — веду ",noSig:"🧭 Нет сигнала — веду ",byRoute:"по маршруту",byCompass:"по компасу",
+  geoDenied:"Нет доступа к геолокации: Настройки → Конфиденциальность → Службы геолокации → Safari",
+  geoNone:"Геолокация недоступна в этом браузере",
+  noPos:"Позиция ещё не определена",waitPos:"Сначала дождитесь своей позиции",building:"Строю маршрут…",
+  noRoute:"Маршрут не найден",noRouteNet:"Нет связи с сервером маршрутов",rerouted:"Маршрут перестроен",
+  noSearch:"Нет связи с поиском",nothing:"Ничего не найдено",noName:"Без названия",pointOnMap:"Точка на карте",
+  fromYou:" от вас",route:"🚗 Маршрут",go:"▶ Поехали",goVoice:"Поехали.",finish:"Завершить",arrivalAt:"прибытие в ",
+  arrived:"Вы прибыли",arrivedToast:"Вы прибыли 🏁",voiceOn:"Голос включён",account:"Аккаунт",logout:"Выйти",
+  min:"мин",h:"ч",m:"м",km:"км",in:"Через ",
+  dirs:{"left":"налево","right":"направо","slight left":"плавно налево","slight right":"плавно направо","sharp left":"резко налево","sharp right":"резко направо","straight":"прямо","uturn":"на разворот"},
+  on:" на ",depart:"Начните движение",round:(e)=>"На круге — "+(e?e+"-й съезд":"съезд"),exitRound:"Съезжайте с круга",
+  fork:(l)=>"Держитесь "+(l?"левее":"правее"),merge:"Перестройтесь",onRamp:"Заезжайте на эстакаду",
+  offRamp:(l)=>"Съезжайте "+(l?"налево":"направо"),endRoad:(d)=>"В конце дороги "+(d||"поверните"),
+  cont:"Продолжайте прямо",keep:(d)=>"Держитесь "+d,uturn:"Развернитесь",straight:"Прямо",turn:(d)=>"Поверните "+d
+ }
+};
+function detectLang(){
+  try{const s=localStorage.getItem("tochka.lang");if(s==="uk"||s==="ru")return s;}catch(e){}
+  const n=(navigator.languages||[navigator.language||""]).join(",").toLowerCase();
+  if(/(^|,)uk/.test(n))return"uk";
+  if(/(^|,)ru/.test(n))return"ru";
+  return"uk";
+}
+let lang=detectLang();
+const t=()=>T[lang];
+let authMode="login";
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll("[data-i18n]").forEach(el=>el.textContent=t()[el.dataset.i18n]);
+  document.querySelectorAll("[data-i18n-ph]").forEach(el=>el.placeholder=t()[el.dataset.i18nPh]);
+  document.querySelectorAll(".langs button").forEach(b=>b.classList.toggle("on",b.dataset.lang===lang));
+  $("#langFab").textContent=lang==="uk"?"UA":"RU";
+  $("#authBtn").textContent=authMode==="login"?t().login:t().signup;
+  $("#toggleMode").textContent=authMode==="login"?t().toSignup:t().toLogin;
+  renderStatus();
+  if(nav.active&&L.pos)updateNav(L.pos);
+}
+function setLang(l){lang=l;try{localStorage.setItem("tochka.lang",l);}catch(e){}applyLang();}
+document.querySelectorAll(".langs button").forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+$("#langFab").onclick=()=>setLang(lang==="uk"?"ru":"uk");
+
+/* ================= Геометрия ================= */
 const RAD=Math.PI/180;
 function hav(a,b){const dLat=(b[1]-a[1])*RAD,dLon=(b[0]-a[0])*RAD;const h=Math.sin(dLat/2)**2+Math.cos(a[1]*RAD)*Math.cos(b[1]*RAD)*Math.sin(dLon/2)**2;return 2*6371000*Math.asin(Math.min(1,Math.sqrt(h)));}
 function brg(a,b){const p1=a[1]*RAD,p2=b[1]*RAD,dl=(b[0]-a[0])*RAD;const y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);return(Math.atan2(y,x)/RAD+360)%360;}
 function dest(p,b,d){const r=6371000,br=b*RAD,p1=p[1]*RAD,l1=p[0]*RAD,dd=d/r;const p2=Math.asin(Math.sin(p1)*Math.cos(dd)+Math.cos(p1)*Math.sin(dd)*Math.cos(br));const l2=l1+Math.atan2(Math.sin(br)*Math.sin(dd)*Math.cos(p1),Math.cos(dd)-Math.sin(p1)*Math.sin(p2));return[l2/RAD,p2/RAD];}
 function circle(p,r){const pts=[];for(let i=0;i<=48;i++)pts.push(dest(p,i*7.5,r));return{type:"Feature",geometry:{type:"Polygon",coordinates:[pts]}};}
-function fmtDist(d){if(d<1000)return Math.max(10,Math.round(d/10)*10)+" м";return(d/1000).toFixed(d<10000?1:0).replace(".",",")+" км";}
-function fmtTime(s){const m=Math.max(1,Math.round(s/60));if(m<60)return m+" мин";return Math.floor(m/60)+" ч "+(m%60)+" мин";}
-function toast(t){const el=$("#toast");el.textContent=t;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>el.style.display="none",2600);}
+function fmtDist(d){if(d<1000)return Math.max(10,Math.round(d/10)*10)+" "+t().m;return(d/1000).toFixed(d<10000?1:0).replace(".",",")+" "+t().km;}
+function fmtTime(s){const m=Math.max(1,Math.round(s/60));if(m<60)return m+" "+t().min;return Math.floor(m/60)+" "+t().h+" "+(m%60)+" "+t().min;}
+function toast(msg){const el=$("#toast");el.textContent=msg;el.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>el.style.display="none",2600);}
 
-/* ---------- Карта ---------- */
-const map=new maplibregl.Map({container:"map",style:CFG.style,center:CFG.center,zoom:12.5,attributionControl:{compact:true},pitchWithRotate:true});
+/* ================= Карта ================= */
+const map=new maplibregl.Map({container:"map",style:CFG.style,center:CFG.center,zoom:12.5,attributionControl:{compact:true}});
 let mapReady=false;
 map.on("load",()=>{
   map.addSource("acc",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
@@ -149,33 +258,33 @@ const meMarker=new maplibregl.Marker({element:meEl,rotationAlignment:"map",pitch
 let meAdded=false,destMarker=null,follow=false;
 map.on("dragstart",()=>{follow=false;$("#locate").classList.remove("on");});
 
-/* ---------- Определение позиции с защитой от РЭБ ---------- */
+/* ================= Позиция с защитой от РЭБ ================= */
 const L={good:null,goodAt:0,goodAlong:null,speed:0,course:null,heading:null,offset:null,state:"none",src:null,acc:0,pos:null};
+const nav={active:false,step:1,said:{},lastReroute:0};
+const R={coords:null,cum:null,steps:null,stepAlong:null,distance:0,duration:0};
 function inArea(p){return p[0]>=CFG.bbox[0]&&p[0]<=CFG.bbox[2]&&p[1]>=CFG.bbox[1]&&p[1]<=CFG.bbox[3];}
 
 function onPosition(pos){
-  const p=[pos.coords.longitude,pos.coords.latitude],acc=pos.coords.accuracy||50,t=pos.timestamp||Date.now();
+  const p=[pos.coords.longitude,pos.coords.latitude],acc=pos.coords.accuracy||50,ts=pos.timestamp||Date.now();
   if(!inArea(p)){L.state="spoof";return;}
   if(L.good&&Date.now()-L.goodAt<CFG.drMax){
-    const dt=Math.max((t-L.good.t)/1000,1);
-    const allowed=CFG.maxSpeed*dt+L.good.acc+acc+100;
-    if(hav(L.good.p,p)>allowed){L.state="spoof";return;}
+    const dt=Math.max((ts-L.good.t)/1000,1);
+    if(hav(L.good.p,p)>CFG.maxSpeed*dt+L.good.acc+acc+100){L.state="spoof";return;}
   }
   L.state=acc<=30?"ok":"weak";
   const s=pos.coords.speed;
   if(s!=null&&s>=0)L.speed=s;
-  else if(L.good){const dt=(t-L.good.t)/1000;if(dt>0.5)L.speed=Math.min(hav(L.good.p,p)/dt,30);}
+  else if(L.good){const dt=(ts-L.good.t)/1000;if(dt>0.5)L.speed=Math.min(hav(L.good.p,p)/dt,30);}
   let c=null;const hd=pos.coords.heading;
   if(hd!=null&&!isNaN(hd)&&L.speed>3)c=hd;
   else if(L.good&&hav(L.good.p,p)>30)c=brg(L.good.p,p);
   if(c!=null){L.course=c;if(L.heading!=null)L.offset=(c-L.heading+360)%360;}
-  L.good={p,acc,t};L.goodAt=Date.now();
+  L.good={p,acc,t:ts};L.goodAt=Date.now();
   L.goodAlong=R.coords?along(p).along:null;
   publish(p,acc,acc<=30?"gps":"wifi");
 }
-function onGeoErr(e){
-  if(e.code===1){$("#status").textContent="Нет доступа к геолокации: Настройки → Конфиденциальность → Службы геолокации → Safari";$("#status").style.background="#6b7280";}
-}
+let geoDenied=false;
+function onGeoErr(e){if(e.code===1){geoDenied=true;renderStatus();}}
 function tick(){if(L.good&&Date.now()-L.goodAt>2500)deadReckon();}
 function deadReckon(){
   const dt=(Date.now()-L.goodAt)/1000;
@@ -195,14 +304,18 @@ function onOrient(e){
   else if(e.absolute&&e.alpha!=null)h=(360-e.alpha)%360;
   if(h!=null)L.heading=h;
 }
-
+function currentDir(){
+  if(L.speed>3&&L.course!=null&&L.src!=="dr")return L.course;
+  if(L.heading!=null&&L.offset!=null)return(L.heading+L.offset)%360;
+  if(L.heading!=null)return L.heading;
+  return L.course;
+}
 function publish(p,acc,src){
   L.pos=p;L.acc=acc;L.src=src;
   if(!meAdded){meMarker.setLngLat(p).addTo(map);meAdded=true;map.jumpTo({center:p,zoom:16});follow=true;$("#locate").classList.add("on");}
   meMarker.setLngLat(p);
   meEl.className="me"+(src==="dr"?" dr":src==="wifi"?" wifi":"");
-  const dir=currentDir();
-  const cone=meEl.querySelector(".cone");
+  const dir=currentDir(),cone=meEl.querySelector(".cone");
   if(dir!=null){cone.style.display="block";meMarker.setRotation(dir);}else cone.style.display="none";
   if(mapReady)map.getSource("acc").setData(circle(p,Math.max(acc,5)));
   renderStatus();
@@ -212,22 +325,17 @@ function publish(p,acc,src){
     else map.easeTo({center:p,duration:700});
   }
 }
-function currentDir(){
-  if(L.speed>3&&L.course!=null&&L.src!=="dr")return L.course;
-  if(L.heading!=null&&L.offset!=null)return(L.heading+L.offset)%360;
-  if(L.heading!=null)return L.heading;
-  return L.course;
-}
 function renderStatus(){
-  const el=$("#status");let t,c;const a="±"+Math.round(L.acc)+" м";
-  if(!L.pos){t="Ищу позицию…";c="#6b7280";}
-  else if(L.src==="gps"){t="🛰 GPS в норме · "+a;c="#15803d";}
-  else if(L.src==="wifi"){t="📡 GPS заглушен — по Wi-Fi/вышкам · "+a;c="#ea580c";}
-  else{t=(L.state==="spoof"?"⚠️ Подмена GPS отброшена — веду по ":"🧭 Нет сигнала — веду по ")+(nav.active?"маршруту":"компасу")+" · "+a;c="#dc2626";}
-  el.textContent=t;el.style.background=c;
+  const el=$("#status");let txt,c;const a=" · ±"+Math.round(L.acc)+" "+t().m;
+  if(geoDenied&&!L.pos){txt=t().geoDenied;c="#6b7280";}
+  else if(!L.pos){txt=t().searching;c="#6b7280";}
+  else if(L.src==="gps"){txt=t().gps+a;c="#15803d";}
+  else if(L.src==="wifi"){txt=t().wifi+a;c="#ea580c";}
+  else{txt=(L.state==="spoof"?t().spoof:t().noSig)+(nav.active?t().byRoute:t().byCompass)+a;c="#dc2626";}
+  el.textContent=txt;el.style.background=c;
 }
 
-/* ---------- Поиск ---------- */
+/* ================= Поиск ================= */
 let sTimer=null;
 $("#q").addEventListener("input",e=>{
   const q=e.target.value.trim();$("#clear").style.display=q?"block":"none";
@@ -244,14 +352,15 @@ async function search(q){
 }
 function describe(f){
   const p=f.properties||{};const street=[p.street,p.housenumber].filter(Boolean).join(", ");
-  const name=p.name||street||"Без названия";
+  const name=p.name||street||t().noName;
   const addr=[p.name&&street?street:null,p.district,p.city||p.county].filter(Boolean).join(", ");
   return{name,addr};
 }
 function showResults(list){
   const box=$("#results");box.innerHTML="";
-  if(list===null){box.innerHTML='<div class="res"><span>Нет связи с поиском</span></div>';}
-  else if(!list.length){box.innerHTML='<div class="res"><span>Ничего не найдено</span></div>';}
+  const note=msg=>{const d=document.createElement("div");d.className="res";const s=document.createElement("span");s.textContent=msg;d.appendChild(s);box.appendChild(d);};
+  if(list===null)note(t().noSearch);
+  else if(!list.length)note(t().nothing);
   else list.forEach(f=>{
     const d=describe(f);const el=document.createElement("div");el.className="res";
     const dist=L.pos?" · "+fmtDist(hav(L.pos,f.geometry.coordinates)):"";
@@ -262,7 +371,7 @@ function showResults(list){
   box.style.display="block";
 }
 
-/* ---------- Выбор места ---------- */
+/* ================= Выбор места ================= */
 let D=null;
 function selectPlace(p,name,addr){
   D={p,name,addr};
@@ -270,15 +379,16 @@ function selectPlace(p,name,addr){
   destMarker=new maplibregl.Marker({color:"#dc2626"}).setLngLat(p).addTo(map);
   follow=false;$("#locate").classList.remove("on");
   map.flyTo({center:p,zoom:16});
-  const dist=L.pos?fmtDist(hav(L.pos,p))+" от вас":"";
-  openSheet('<h2></h2><p></p><div class="row"><button class="btn" id="goRoute">🚗 Маршрут</button><button class="btn sec" id="closeSheet">✕</button></div>');
+  const dist=L.pos?fmtDist(hav(L.pos,p))+t().fromYou:"";
+  openSheet('<h2></h2><p></p><div class="row"><button class="btn" id="goRoute"></button><button class="btn sec" id="closeSheet">✕</button></div>');
   $("#sheetBody h2").textContent=name;$("#sheetBody p").textContent=[addr,dist].filter(Boolean).join(" · ");
+  $("#goRoute").textContent=t().route;
   $("#goRoute").onclick=()=>buildRoute(false);$("#closeSheet").onclick=clearAll;
 }
 map.on("click",e=>{
   if(nav.active)return;
   if($("#results").style.display==="block"){$("#results").style.display="none";return;}
-  const p=e.lngLat.toArray();selectPlace(p,"Точка на карте",p[1].toFixed(5)+", "+p[0].toFixed(5));
+  const p=e.lngLat.toArray();selectPlace(p,t().pointOnMap,p[1].toFixed(5)+", "+p[0].toFixed(5));
 });
 function openSheet(html){$("#sheetBody").innerHTML=html;$("#sheet").classList.add("open");requestAnimationFrame(()=>{$("#fabs").style.bottom=($("#sheet").offsetHeight+14)+"px";});}
 function closeSheet(){$("#sheet").classList.remove("open");$("#fabs").style.bottom="";}
@@ -287,20 +397,19 @@ function clearAll(){
   if(mapReady)map.getSource("route").setData({type:"FeatureCollection",features:[]});
 }
 
-/* ---------- Маршрут ---------- */
-const R={coords:null,cum:null,steps:null,stepAlong:null,distance:0,duration:0};
+/* ================= Маршрут ================= */
 async function buildRoute(isReroute){
-  if(!L.pos){toast("Сначала дождитесь своей позиции");return;}
+  if(!L.pos){toast(t().waitPos);return;}
   if(!D)return;
-  if(!isReroute)toast("Строю маршрут…");
+  if(!isReroute)toast(t().building);
   try{
     const u=CFG.route+L.pos[0]+","+L.pos[1]+";"+D.p[0]+","+D.p[1]+"?overview=full&geometries=geojson&steps=true";
     const j=await (await fetch(u)).json();
-    if(j.code!=="Ok"||!j.routes||!j.routes.length){toast("Маршрут не найден");return;}
+    if(j.code!=="Ok"||!j.routes||!j.routes.length){toast(t().noRoute);return;}
     setRoute(j.routes[0]);
-    if(isReroute){nav.step=1;nav.said={};speak("Маршрут перестроен");}
+    if(isReroute){nav.step=1;nav.said={};speak(t().rerouted);}
     else showRouteSheet();
-  }catch(e){toast("Нет связи с сервером маршрутов");}
+  }catch(e){toast(t().noRouteNet);}
 }
 function setRoute(rt){
   R.coords=rt.geometry.coordinates;R.cum=[0];
@@ -324,49 +433,50 @@ function pointAt(a){
 function showRouteSheet(){
   const b=new maplibregl.LngLatBounds();R.coords.forEach(c=>b.extend(c));
   map.fitBounds(b,{padding:{top:150,bottom:260,left:40,right:40},duration:800});
-  openSheet('<div class="big">'+fmtTime(R.duration)+'</div><p>'+fmtDist(R.distance)+' · <span id="rName"></span></p><div class="row"><button class="btn" id="goNav">▶ Поехали</button><button class="btn sec" id="closeSheet">✕</button></div>');
-  $("#rName").textContent=D.name;$("#goNav").onclick=startNav;$("#closeSheet").onclick=clearAll;
+  openSheet('<div class="big"></div><p></p><div class="row"><button class="btn" id="goNav"></button><button class="btn sec" id="closeSheet">✕</button></div>');
+  $("#sheetBody .big").textContent=fmtTime(R.duration);
+  $("#sheetBody p").textContent=fmtDist(R.distance)+" · "+D.name;
+  $("#goNav").textContent=t().go;
+  $("#goNav").onclick=startNav;$("#closeSheet").onclick=clearAll;
 }
 
-/* ---------- Навигация ---------- */
-const nav={active:false,step:1,said:{},lastReroute:0};
-const DIRS={"left":"налево","right":"направо","slight left":"плавно налево","slight right":"плавно направо","sharp left":"резко налево","sharp right":"резко направо","straight":"прямо","uturn":"на разворот"};
+/* ================= Навигация ================= */
 const ARROWS={"left":"↰","right":"↱","slight left":"↖","slight right":"↗","sharp left":"↙","sharp right":"↘","straight":"↑","uturn":"↶"};
 function instr(s){
-  const m=s.maneuver,mod=m.modifier||"",dir=DIRS[mod]||"",name=s.name?" на "+s.name:"";
+  const x=t(),m=s.maneuver,mod=m.modifier||"",dir=x.dirs[mod]||"",name=s.name?x.on+s.name:"",left=mod.indexOf("left")>=0;
   switch(m.type){
-    case "depart":return"Начните движение"+name;
-    case "arrive":return"Вы прибыли";
-    case "roundabout":case "rotary":case "roundabout turn":return"На круге — "+(m.exit?m.exit+"-й съезд":"съезд")+name;
-    case "exit roundabout":case "exit rotary":return"Съезжайте с круга"+name;
-    case "fork":return"Держитесь "+(mod.indexOf("left")>=0?"левее":"правее")+name;
-    case "merge":return"Перестройтесь"+name;
-    case "on ramp":return"Заезжайте на эстакаду"+name;
-    case "off ramp":return"Съезжайте "+(mod.indexOf("left")>=0?"налево":"направо")+name;
-    case "end of road":return"В конце дороги "+(dir||"поверните")+name;
-    case "continue":case "new name":return(mod==="straight"||!dir)?"Продолжайте прямо"+name:"Держитесь "+dir+name;
+    case "depart":return x.depart+name;
+    case "arrive":return x.arrived;
+    case "roundabout":case "rotary":case "roundabout turn":return x.round(m.exit)+name;
+    case "exit roundabout":case "exit rotary":return x.exitRound+name;
+    case "fork":return x.fork(left)+name;
+    case "merge":return x.merge+name;
+    case "on ramp":return x.onRamp+name;
+    case "off ramp":return x.offRamp(left)+name;
+    case "end of road":return x.endRoad(dir)+name;
+    case "continue":case "new name":return(mod==="straight"||!dir)?x.cont+name:x.keep(dir)+name;
     default:
-      if(mod==="uturn")return"Развернитесь"+name;
-      if(mod==="straight"||!dir)return"Прямо"+name;
-      return"Поверните "+dir+name;
+      if(mod==="uturn")return x.uturn+name;
+      if(mod==="straight"||!dir)return x.straight+name;
+      return x.turn(dir)+name;
   }
 }
-function arrow(s){const t=s.maneuver.type;if(t==="arrive")return"🏁";if(t.indexOf("round")>=0||t.indexOf("rotary")>=0)return"⟳";return ARROWS[s.maneuver.modifier]||"↑";}
+function arrow(s){const ty=s.maneuver.type;if(ty==="arrive")return"🏁";if(ty.indexOf("round")>=0||ty.indexOf("rotary")>=0)return"⟳";return ARROWS[s.maneuver.modifier]||"↑";}
 
 let voiceOn=true;
-function speak(t){
+function speak(txt){
   if(!voiceOn||!("speechSynthesis" in window))return;
-  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ru-RU";u.rate=1.02;speechSynthesis.speak(u);}catch(e){}
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=t().voice;u.rate=1.02;speechSynthesis.speak(u);}catch(e){}
 }
-$("#voice").onclick=()=>{voiceOn=!voiceOn;$("#voice").textContent=voiceOn?"🔊":"🔇";if(voiceOn)speak("Голос включён");};
+$("#voice").onclick=()=>{voiceOn=!voiceOn;$("#voice").textContent=voiceOn?"🔊":"🔇";if(voiceOn)speak(t().voiceOn);};
 
 function startNav(){
   nav.active=true;nav.step=1;nav.said={};follow=true;$("#locate").classList.add("on");
   $("#searchBox").style.display="none";$("#results").style.display="none";$("#banner").style.display="flex";
-  openSheet('<div class="row" style="align-items:center"><div style="flex:1"><div class="big" id="nEta">—</div><p id="nRem" style="margin:0">—</p></div><button class="btn red" id="stopNav" style="flex:0 0 auto">Завершить</button></div>');
-  $("#stopNav").onclick=stopNav;
+  openSheet('<div class="row" style="align-items:center"><div style="flex:1"><div class="big" id="nEta">—</div><p id="nRem" style="margin:0">—</p></div><button class="btn red" id="stopNav" style="flex:0 0 auto"></button></div>');
+  $("#stopNav").textContent=t().finish;$("#stopNav").onclick=stopNav;
   const first=R.steps[1];
-  speak("Поехали. "+(first?instr(first):""));
+  speak(t().goVoice+" "+(first?instr(first):""));
   if(L.pos)updateNav(L.pos);
 }
 function stopNav(){
@@ -380,38 +490,78 @@ function updateNav(p){
   const s=R.steps[nav.step];if(!s)return;
   const d=Math.max(0,R.stepAlong[nav.step]-a.along);
   $("#bArrow").textContent=arrow(s);$("#bDist").textContent=fmtDist(d);$("#bTxt").textContent=instr(s);
-  const rem=Math.max(0,R.cum[R.cum.length-1]-a.along);
-  const avg=R.distance/Math.max(R.duration,1);
+  const rem=Math.max(0,R.cum[R.cum.length-1]-a.along),avg=R.distance/Math.max(R.duration,1);
   if($("#nEta"))$("#nEta").textContent=fmtTime(rem/avg);
-  if($("#nRem"))$("#nRem").textContent=fmtDist(rem)+" · прибытие в "+new Date(Date.now()+rem/avg*1000).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
-  if(s.maneuver.type==="arrive"&&d<30){speak("Вы прибыли");stopNav();toast("Вы прибыли 🏁");return;}
-  if(d<250&&d>60&&!nav.said[nav.step+"f"]){nav.said[nav.step+"f"]=1;speak("Через "+fmtDist(d)+" — "+instr(s).toLowerCase());}
+  if($("#nRem"))$("#nRem").textContent=fmtDist(rem)+" · "+t().arrivalAt+new Date(Date.now()+rem/avg*1000).toLocaleTimeString(t().locale,{hour:"2-digit",minute:"2-digit"});
+  if($("#stopNav"))$("#stopNav").textContent=t().finish;
+  if(s.maneuver.type==="arrive"&&d<30){speak(t().arrived);stopNav();toast(t().arrivedToast);return;}
+  if(d<250&&d>60&&!nav.said[nav.step+"f"]){nav.said[nav.step+"f"]=1;speak(t().in+fmtDist(d)+" — "+instr(s).toLowerCase());}
   if(d<40&&!nav.said[nav.step+"n"]){nav.said[nav.step+"n"]=1;speak(instr(s));}
 }
 
-/* ---------- Кнопки ---------- */
+/* ================= Кнопки ================= */
 $("#locate").onclick=()=>{
-  if(!L.pos){toast("Позиция ещё не определена");return;}
+  if(!L.pos){toast(t().noPos);return;}
   follow=true;$("#locate").classList.add("on");
   map.easeTo({center:L.pos,zoom:Math.max(map.getZoom(),16),duration:600});
 };
 $("#north").onclick=()=>map.easeTo({bearing:0,pitch:0,duration:500});
 
-/* ---------- Запуск ---------- */
+/* ================= Запуск ================= */
 let wake=null;
 async function requestWake(){try{if("wakeLock" in navigator)wake=await navigator.wakeLock.request("screen");}catch(e){}}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")requestWake();});
-let started=false;
-async function start(){
+let started=false,orientAsked=false;
+function reqOrient(){
+  if(orientAsked)return;orientAsked=true;
+  try{if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function")DeviceOrientationEvent.requestPermission().catch(()=>{});}catch(e){}
+}
+function start(){
   if(started)return;started=true;
-  try{if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function")await DeviceOrientationEvent.requestPermission();}catch(e){}
   window.addEventListener("deviceorientation",onOrient);
   window.addEventListener("deviceorientationabsolute",onOrient);
-  if(!("geolocation" in navigator)){toast("Геолокация недоступна в этом браузере");return;}
+  if(!orientAsked)document.addEventListener("click",reqOrient,{once:true});
+  if(!("geolocation" in navigator)){toast(t().geoNone);return;}
   navigator.geolocation.watchPosition(onPosition,onGeoErr,{enableHighAccuracy:true,maximumAge:0,timeout:20000});
   setInterval(tick,1000);requestWake();
 }
-$("#startBtn").onclick=()=>{$("#intro").style.display="none";start();};
+$("#startBtn").onclick=()=>{reqOrient();$("#intro").style.display="none";start();};
+
+/* ================= Регистрация (Firebase) ================= */
+let fbAuth=null;
+try{if(FIREBASE_CONFIG&&window.firebase){firebase.initializeApp(FIREBASE_CONFIG);fbAuth=firebase.auth();}}catch(e){fbAuth=null;}
+if(fbAuth){
+  $("#startBtn").style.display="none";$("#auth").style.display="flex";$("#acct").style.display="flex";
+  const errMsg=c=>t().errs[c]||(t().err+c);
+  $("#toggleMode").onclick=()=>{authMode=authMode==="login"?"signup":"login";$("#pass").autocomplete=authMode==="login"?"current-password":"new-password";$("#authErr").textContent="";applyLang();};
+  $("#authBtn").onclick=async()=>{
+    reqOrient();
+    const e=$("#email").value.trim(),p=$("#pass").value;
+    $("#authBtn").disabled=true;$("#authErr").textContent="";
+    try{if(authMode==="login")await fbAuth.signInWithEmailAndPassword(e,p);else await fbAuth.createUserWithEmailAndPassword(e,p);}
+    catch(err){$("#authErr").textContent=errMsg(err.code);}
+    $("#authBtn").disabled=false;
+  };
+  $("#forgot").onclick=async()=>{
+    const e=$("#email").value.trim();if(!e){$("#authErr").textContent=t().enterEmail;return;}
+    try{fbAuth.languageCode=lang;await fbAuth.sendPasswordResetEmail(e);$("#authErr").textContent="";toast(t().resetSent);}
+    catch(err){$("#authErr").textContent=errMsg(err.code);}
+  };
+  fbAuth.onAuthStateChanged(u=>{
+    if(u){$("#intro").style.display="none";start();}
+    else $("#intro").style.display="flex";
+  });
+  $("#acct").onclick=()=>{
+    const u=fbAuth.currentUser;
+    openSheet('<h2></h2><p id="accMail"></p><div class="row"><button class="btn red" id="logout"></button><button class="btn sec" id="closeSheet">✕</button></div>');
+    $("#sheetBody h2").textContent=t().account;$("#accMail").textContent=u?u.email:"";
+    $("#logout").textContent=t().logout;
+    $("#logout").onclick=()=>fbAuth.signOut().then(()=>location.reload());
+    $("#closeSheet").onclick=closeSheet;
+  };
+}
+
+applyLang();
 })();
 </script>
 </body>
