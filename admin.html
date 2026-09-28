@@ -42,6 +42,11 @@ input:focus{border-color:var(--accent)}
 a{color:var(--accent)}
 #toast{position:fixed;left:50%;bottom:calc(var(--bottom) + 24px);transform:translateX(-50%);background:#000c;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;display:none;z-index:9}
 .hidden{display:none}
+.refbox{background:rgba(79,140,255,.08);border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.6}
+.refbox b{color:var(--text)}
+.paidf{color:var(--green);word-break:break-all}
+.allf{color:var(--muted);word-break:break-all}
+.link{background:none;border:0;color:var(--accent);font-size:13px;padding:4px 0;cursor:pointer}
 </style>
 </head>
 <body>
@@ -76,6 +81,10 @@ a{color:var(--accent)}
     <div class="stat"><div class="n" id="sPaid" style="color:var(--green)">—</div><div class="l">Платят</div></div>
     <div class="stat"><div class="n" id="sOff" style="color:var(--red)">—</div><div class="l">Доступ закончился</div></div>
     <div class="stat"><div class="n" id="sMoney">—</div><div class="l">Доход в месяц, грн</div></div>
+    <div class="stat"><div class="n" id="sRef">—</div><div class="l">Пришли по реф-ссылкам</div></div>
+    <div class="stat"><div class="n" id="sRefPaid" style="color:var(--green)">—</div><div class="l">Из них оплатили</div></div>
+    <div class="stat"><div class="n" id="sComm">—</div><div class="l">Партнёрам в месяц, грн</div></div>
+    <div class="stat"><div class="n" id="sOwe" style="color:var(--orange)">—</div><div class="l">К выплате партнёрам, грн</div></div>
   </div>
   <p class="muted">Посещения без регистрации смотрите в <a href="https://console.firebase.google.com/project/tochka-cabf3/analytics" target="_blank">Firebase Analytics</a>.</p>
 
@@ -88,6 +97,10 @@ a{color:var(--accent)}
       <button class="btn sm" data-grant="12">+1 год</button>
     </div>
   </div>
+
+  <h2>Рефералы</h2>
+  <p class="muted" style="margin-top:0">Партнёр получает <span id="bonusDays"></span> с каждой оплаты друга. Начисляется автоматически, когда вы нажимаете «+1 мес», «+3 мес» или «+1 год» у друга.</p>
+  <div id="refList"></div>
 
   <h2>Пользователи</h2>
   <input id="search" type="search" placeholder="Поиск по почте">
@@ -111,7 +124,7 @@ a{color:var(--accent)}
 (function(){
 "use strict";
 const ADMIN_EMAIL="om1111oo@icloud.com";
-const PRICE=100, TRIAL_DAYS=7, DAY=864e5;
+const PRICE=100, TRIAL_DAYS=7, DAY=864e5, REF_SHARE=0.30, MIN_PAYOUT=200;
 firebase.initializeApp({
   apiKey:"AIzaSyBiqFv9wdmUMCKO-G--jrp40eMktQLXirs",
   authDomain:"tochka-cabf3.firebaseapp.com",
@@ -141,8 +154,16 @@ async function load(){
   try{
     const [uSnap,sSnap]=await Promise.all([db.collection("users").get(),db.collection("subs").get()]);
     const map={};
-    uSnap.forEach(d=>{const x=d.data();map[d.id]={email:d.id,created:ms(x.createdAt),seen:ms(x.lastSeen),device:x.device||"",lang:x.lang||"",paid:0};});
-    sSnap.forEach(d=>{const x=d.data();if(!map[d.id])map[d.id]={email:d.id,created:0,seen:0,device:"",lang:"",paid:0};map[d.id].paid=ms(x.paidUntil);});
+    uSnap.forEach(d=>{const x=d.data();map[d.id]={email:d.id,created:ms(x.createdAt),seen:ms(x.lastSeen),device:x.device||"",lang:x.lang||"",code:x.code||"",ref:x.ref||"",paid:0,hasSub:false,bonusFor:[]};});
+    sSnap.forEach(d=>{const x=d.data();if(!map[d.id])map[d.id]={email:d.id,created:0,seen:0,device:"",lang:"",code:"",ref:"",paid:0,hasSub:false,bonusFor:[]};
+      map[d.id].paid=ms(x.paidUntil);map[d.id].hasSub=true;map[d.id].bonusFor=x.bonusFor||[];
+      map[d.id].earned=+x.earned||0;map[d.id].paidOut=+x.paidOut||0;map[d.id].payouts=x.payouts||[];});
+    const byCode={};Object.values(map).forEach(u=>{if(u.code)byCode[u.code]=u.email;});
+    Object.values(map).forEach(u=>{u.refBy=u.ref?(byCode[u.ref]||""):"";u.everPaid=u.hasSub&&u.paid>0;});
+    Object.values(map).forEach(u=>{
+      u.invited=Object.values(map).filter(f=>f.refBy===u.email);
+      u.paidFriends=u.invited.filter(f=>f.everPaid);
+    });
     users=Object.values(map).map(u=>{
       const now=Date.now(),trialEnd=u.created?u.created+TRIAL_DAYS*DAY:0;
       u.trialEnd=trialEnd;
@@ -165,6 +186,14 @@ function renderStats(){
   $("#sPaid").textContent=paid;
   $("#sOff").textContent=users.filter(u=>u.status==="off").length;
   $("#sMoney").textContent=(paid*PRICE).toLocaleString("ru-RU");
+  const refd=users.filter(u=>u.refBy);
+  $("#sRef").textContent=refd.length;
+  $("#sRefPaid").textContent=refd.filter(u=>u.everPaid).length;
+  $("#bonusDays").textContent=Math.round(REF_SHARE*100)+"%";
+  const owe=users.reduce((s,u)=>s+Math.max(0,(u.earned||0)-(u.paidOut||0)),0);
+  $("#sOwe").textContent=Math.round(owe).toLocaleString("ru-RU");
+  $("#sComm").textContent=Math.round(users.filter(u=>u.status==="paid"&&u.refBy).length*PRICE*REF_SHARE).toLocaleString("ru-RU");
+  renderRefs();
 }
 
 function renderList(){
@@ -181,10 +210,79 @@ function renderList(){
       '<div class="row" style="margin-top:10px"><button class="btn sm" data-m="1">+1 мес</button><button class="btn sm" data-m="12">+1 год</button>'+
       (u.paid>Date.now()?'<button class="btn sm red" data-m="0">Отключить</button>':'')+'</div>';
     el.querySelector(".em").textContent=u.email;
-    el.querySelector(".meta").textContent="Регистрация: "+fmtDate(u.created)+" · Заходил: "+ago(u.seen)+(u.device?" · "+u.device:"");
+    el.querySelector(".meta").textContent="Регистрация: "+fmtDate(u.created)+" · Заходил: "+ago(u.seen)+(u.device?" · "+u.device:"")
+      +(u.refBy?"\nПригласил его: "+u.refBy:"")
+      +(u.invited.length?"\nПривёл друзей: "+u.invited.length+", оплатили: "+u.paidFriends.length:"");
+    el.querySelector(".meta").style.whiteSpace="pre-line";
+    if(!u.refBy&&u.created){const b=document.createElement("button");b.className="link";b.textContent="Указать, кто пригласил";b.onclick=()=>setRef(u.email);el.appendChild(b);}
     el.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>setAccess(u.email,+b.dataset.m,b));
     list.appendChild(el);
   });
+}
+
+function renderRefs(){
+  const box=$("#refList");box.innerHTML="";
+  const refs=users.filter(u=>u.invited&&u.invited.length).sort((a,b)=>b.paidFriends.length-a.paidFriends.length||b.invited.length-a.invited.length);
+  if(!refs.length){box.innerHTML='<div class="muted">Пока никто не пришёл по реферальной ссылке</div>';return;}
+  refs.forEach(u=>{
+    const el=document.createElement("div");el.className="user";
+    const earned=Math.round(u.earned||0),out=Math.round(u.paidOut||0),owe=Math.max(0,earned-out);
+    const activeNow=u.paidFriends.filter(f=>f.status==="paid").length;
+    el.innerHTML='<div class="em"></div><div class="meta"></div><div class="refbox"><div class="earn"></div><div style="margin-top:6px"><b>Оплатили:</b></div><div class="pf"></div><button class="link tg">Показать всех приглашённых</button><div class="af hidden"></div></div><div class="row" style="margin-top:10px"><button class="btn sm pay">Отметить выплату</button></div>';
+    el.querySelector(".em").textContent=u.email;
+    el.querySelector(".meta").textContent="Пригласил: "+u.invited.length+" · Оплачивали: "+u.paidFriends.length+" · Платят сейчас: "+activeNow+" (≈"+Math.round(activeNow*PRICE*REF_SHARE)+" грн/мес партнёру)";
+    el.querySelector(".earn").innerHTML='Заработал: <b></b> грн · Выплачено: <b></b> грн · <span style="color:var(--orange);font-weight:700">К выплате: <b></b> грн</span>'+(owe>=MIN_PAYOUT?' ✅ можно выводить':'');
+    const bs=el.querySelectorAll(".earn b");bs[0].textContent=earned;bs[1].textContent=out;bs[2].textContent=owe;
+    el.querySelector(".pay").onclick=()=>markPayout(u.email,owe);
+    el.querySelector(".pay").disabled=owe<=0;
+    const pf=el.querySelector(".pf");
+    if(u.paidFriends.length)u.paidFriends.forEach(f=>{const d=document.createElement("div");d.className="paidf";d.textContent=(f.status==="paid"?"✅ ":"⏸ ")+f.email+(f.status==="paid"?" · платит до "+fmtDate(f.paid):" · перестал платить");pf.appendChild(d);});
+    else pf.innerHTML='<span class="allf">пока никто</span>';
+    const af=el.querySelector(".af");
+    u.invited.forEach(f=>{const d=document.createElement("div");d.className=f.everPaid?"paidf":"allf";d.textContent=(f.everPaid?"✅ ":"• ")+f.email+" · рег. "+fmtDate(f.created);af.appendChild(d);});
+    el.querySelector(".tg").onclick=e=>{af.classList.toggle("hidden");e.target.textContent=af.classList.contains("hidden")?"Показать всех приглашённых":"Скрыть";};
+    box.appendChild(el);
+  });
+}
+
+// Комиссия партнёру: 30% с каждой оплаты его друга
+async function creditReferrer(friendEmail,months){
+  const f=users.find(x=>x.email===friendEmail);
+  if(!f||!f.refBy||months<=0)return "";
+  const amount=Math.round(months*PRICE*REF_SHARE);
+  await db.collection("subs").doc(f.refBy).set({
+    earned:firebase.firestore.FieldValue.increment(amount),
+    refLog:firebase.firestore.FieldValue.arrayUnion(new Date().toISOString().slice(0,10)+" · "+friendEmail+" · +"+amount)
+  },{merge:true});
+  return " · +"+amount+" грн партнёру "+f.refBy;
+}
+
+async function markPayout(email,owe){
+  const v=prompt("Сколько вы перевели "+email+" (грн)?",String(owe));
+  const amount=Math.round(+String(v||"").replace(",","."));
+  if(!amount||amount<=0)return;
+  try{
+    await db.collection("subs").doc(email).set({
+      paidOut:firebase.firestore.FieldValue.increment(amount),
+      payouts:firebase.firestore.FieldValue.arrayUnion(new Date().toISOString().slice(0,10)+" · "+amount+" грн")
+    },{merge:true});
+    toast("Выплата "+amount+" грн отмечена");await load();
+  }catch(e){toast("Ошибка: "+(e.code||e.message));}
+}
+
+async function setRef(friendEmail){
+  const r=(prompt("Почта того, кто пригласил "+friendEmail+":")||"").trim().toLowerCase();
+  if(!r)return;
+  const referrer=users.find(x=>x.email===r);
+  if(!referrer||!referrer.code){toast("Этот человек ещё не открывал обновлённую «Точку»");return;}
+  if(r===friendEmail){toast("Нельзя пригласить самого себя");return;}
+  try{
+    await db.collection("users").doc(friendEmail).update({ref:referrer.code});
+    let msg="Готово";
+    const f=users.find(x=>x.email===friendEmail);
+    if(f&&f.everPaid)msg+=" · прошлые оплаты не начисляются, только будущие";
+    toast(msg);await load();
+  }catch(e){toast("Ошибка: "+(e.code||e.message));}
 }
 
 async function setAccess(email,months,btn){
@@ -202,7 +300,9 @@ async function setAccess(email,months,btn){
       const d=new Date(base);d.setMonth(d.getMonth()+months);until=d;
     }
     await ref.set({paidUntil:firebase.firestore.Timestamp.fromDate(until)},{merge:true});
-    toast(months===0?"Подписка отключена":"Доступ до "+until.toLocaleDateString("ru-RU"));
+    let extra="";
+    if(months>0){try{extra=await creditReferrer(email,months);}catch(e){extra=" · комиссия не начислена: "+(e.code||e.message);}}
+    toast(months===0?"Подписка отключена":"Доступ до "+until.toLocaleDateString("ru-RU")+extra);
     await load();
   }catch(e){toast("Ошибка: "+(e.code||e.message));}
   if(btn)btn.disabled=false;
