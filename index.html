@@ -18,8 +18,8 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:#1c1f26;--text:#f3f4f6;--muted:#9ca3af;--line:#2d313a;--accent:#4f8cff;}}
 :root[data-theme="dark"]{--card:#1c1f26;--text:#f3f4f6;--muted:#9ca3af;--line:#2d313a;--accent:#4f8cff;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:var(--text)}
-#map{position:absolute;inset:0}
+html,body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#111318;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;color:var(--text)}
+#map{position:fixed;inset:0}
 .maplibregl-ctrl-attrib{font-size:10px}
 
 #top{position:absolute;left:12px;right:12px;top:calc(var(--top) + 10px);z-index:5;display:flex;flex-direction:column;gap:8px}
@@ -43,8 +43,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
 .fab.txt{font-size:15px;font-weight:800}
 .fab.on{color:var(--accent)}
 
-#sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.2);padding:10px 18px calc(var(--bottom) + 18px);transform:translateY(110%);transition:transform .25s}
-#sheet.open{transform:translateY(0)}
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.2);padding:10px 18px calc(var(--bottom) + 18px);transform:translateY(calc(100% + 40px));visibility:hidden;transition:transform .25s,visibility 0s .25s}
+#sheet.open{transform:translateY(0);visibility:visible;transition:transform .25s}
 #sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
 #sheet h2{margin:0 0 4px;font-size:21px}
 #sheet p{margin:0 0 14px;color:var(--muted);font-size:14px}
@@ -79,6 +79,16 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
 .authlinks{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-top:4px}
 .authlinks a{color:var(--accent);cursor:pointer}
 
+#paywall{position:fixed;inset:0;z-index:22;background:var(--card);display:none;flex-direction:column;justify-content:center;padding:calc(var(--top) + 20px) 28px calc(var(--bottom) + 24px);gap:12px;overflow-y:auto;text-align:center}
+#paywall .pwicon{font-size:54px}
+#paywall h2{margin:0;font-size:26px}
+#paywall p{margin:0;color:var(--muted);font-size:16px;line-height:1.4}
+#paywall .price{font-size:34px;font-weight:800;margin:6px 0}
+#paywall .mail{border:1px dashed var(--accent);background:transparent;color:var(--accent);border-radius:12px;padding:12px;font-size:16px;font-weight:600;word-break:break-all}
+#paywall .btn{flex:0 0 auto}
+#paywall small{color:var(--muted);font-size:13px}
+#paywall .authlinks{justify-content:center;gap:24px}
+.trial{text-align:center;font-weight:700;font-size:16px;background:rgba(37,99,235,.12);color:var(--accent);border-radius:12px;padding:10px}
 #toast{position:absolute;left:50%;top:calc(var(--top) + 140px);transform:translateX(-50%);z-index:30;background:rgba(17,19,24,.9);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;display:none;max-width:85%;text-align:center}
 </style>
 </head>
@@ -117,6 +127,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
     <li><span>📶</span><span data-i18n="f4"></span></li>
     <li><span>🧭</span><span data-i18n="f5"></span></li>
   </ul>
+  <div class="trial" data-i18n="trialNote"></div>
   <div id="auth">
     <input id="email" type="email" data-i18n-ph="emailPh" autocomplete="email" inputmode="email">
     <input id="pass" type="password" data-i18n-ph="passPh" autocomplete="current-password">
@@ -128,11 +139,24 @@ html,body{height:100%;margin:0;overflow:hidden;background:#111318;font-family:-a
   <small data-i18n="hint"></small>
 </div>
 
+<div id="paywall">
+  <div class="pwicon">⏳</div>
+  <h2 data-i18n="pwTitle"></h2>
+  <p data-i18n="pwText"></p>
+  <div class="price" data-i18n="pwPrice"></div>
+  <p data-i18n="pwComment"></p>
+  <button class="mail" id="pwMail"></button>
+  <button class="btn" id="pwPay" data-i18n="pwPay"></button>
+  <small data-i18n="pwNote"></small>
+  <div class="authlinks"><a id="pwSupport" data-i18n="pwSupport"></a><a id="pwLogout" data-i18n="logout"></a></div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
 "use strict";
@@ -149,6 +173,11 @@ const FIREBASE_CONFIG={
   appId:"1:1025615948664:web:4aa046116cd6f685acf68d"
 };
 
+// Подписка
+const TRIAL_DAYS=7;
+const PAY_URL="https://t.me/omoo_0000";      // оплата — через чат в Telegram
+const SUPPORT_URL="https://t.me/omoo_0000";  // поддержка — Telegram
+
 const CFG={maxSpeed:70,drMax:120000,bbox:[22,44,40.3,52.5],center:[30.7233,46.4825],
   style:"https://tiles.openfreemap.org/styles/liberty",
   search:"https://photon.komoot.io/api/",
@@ -158,6 +187,14 @@ const CFG={maxSpeed:70,drMax:120000,bbox:[22,44,40.3,52.5],center:[30.7233,46.48
 const T={
  uk:{
   voice:"uk-UA",locale:"uk-UA",
+  trialNote:"🎁 7 днів безкоштовно, далі 100 грн/міс",
+  pwTitle:"Пробний період закінчився",pwText:"Щоб і далі користуватися «Точкою», оформіть підписку.",pwPrice:"100 грн / місяць",
+  pwComment:"Натисніть «Оплатити» — відкриється чат у Telegram. Напишіть туди вашу пошту:",pwPay:"💳 Оплатити",pwCheck:"Я оплатив — перевірити",
+  pwNote:"Доступ відкривається протягом кількох годин після оплати.",pwSupport:"Підтримка",
+  pwNotFound:"Оплату ще не знайдено. Спробуйте пізніше або напишіть у підтримку.",pwNoPay:"Оплата ще не налаштована",pwOk:"Підписку активовано ✅",
+  copied:"Пошту скопійовано",
+  trialLeft:(n)=>"Пробний період: залишилось "+n+" "+(n===1?"день":n<5?"дні":"днів"),
+  paidTill:(d)=>"Підписка активна до "+d,
   searchPh:"Куди їдемо? Адреса або місце",
   lead:"Навігатор, який не губить вас під час тривоги, коли глушать і підміняють GPS.",
   f1:"Пошук адрес і місць",f2:"Маршрути з голосовими підказками",f3:"Відкидає фальшиві координати",
@@ -186,6 +223,14 @@ const T={
  },
  ru:{
   voice:"ru-RU",locale:"ru-RU",
+  trialNote:"🎁 7 дней бесплатно, дальше 100 грн/мес",
+  pwTitle:"Пробный период закончился",pwText:"Чтобы и дальше пользоваться «Точкой», оформите подписку.",pwPrice:"100 грн / месяц",
+  pwComment:"Нажмите «Оплатить» — откроется чат в Telegram. Напишите туда вашу почту:",pwPay:"💳 Оплатить",pwCheck:"Я оплатил — проверить",
+  pwNote:"Доступ открывается в течение нескольких часов после оплаты.",pwSupport:"Поддержка",
+  pwNotFound:"Оплата пока не найдена. Попробуйте позже или напишите в поддержку.",pwNoPay:"Оплата ещё не настроена",pwOk:"Подписка активирована ✅",
+  copied:"Почта скопирована",
+  trialLeft:(n)=>"Пробный период: осталось "+n+" "+(n===1?"день":n<5?"дня":"дней"),
+  paidTill:(d)=>"Подписка активна до "+d,
   searchPh:"Куда едем? Адрес или место",
   lead:"Навигатор, который не теряет вас во время тревоги, когда глушат и подменяют GPS.",
   f1:"Поиск адресов и мест",f2:"Маршруты с голосовыми подсказками",f3:"Отбрасывает ложные координаты",
@@ -554,19 +599,71 @@ if(fbAuth){
     try{fbAuth.languageCode=lang;await fbAuth.sendPasswordResetEmail(e);$("#authErr").textContent="";toast(t().resetSent);}
     catch(err){$("#authErr").textContent=errMsg(err.code);}
   };
-  fbAuth.onAuthStateChanged(u=>{
-    if(u){$("#intro").style.display="none";start();}
-    else $("#intro").style.display="flex";
+  let db=null;try{db=firebase.firestore();}catch(e){}
+  const access={trialEnd:0,paidUntil:0};
+  const toMs=v=>!v?0:(v.toDate?v.toDate().getTime():new Date(v).getTime()||0);
+  async function checkAccess(u){
+    access.trialEnd=new Date(u.metadata.creationTime).getTime()+TRIAL_DAYS*864e5;
+    const key="tochka.paid."+(u.email||"").toLowerCase();
+    let cached=0;try{cached=+localStorage.getItem(key)||0;}catch(e){}
+    access.paidUntil=cached;
+    try{
+      if(db){
+        const d=await db.collection("subs").doc((u.email||"").toLowerCase()).get();
+        access.paidUntil=d.exists?toMs(d.data().paidUntil):0;
+        try{localStorage.setItem(key,String(access.paidUntil));}catch(e){}
+      }
+    }catch(e){access.paidUntil=cached;}
+    const now=Date.now();
+    return now<access.trialEnd||now<access.paidUntil;
+  }
+  function statusLine(){
+    const now=Date.now();
+    if(access.paidUntil>now)return t().paidTill(new Date(access.paidUntil).toLocaleDateString(t().locale));
+    if(access.trialEnd>now)return t().trialLeft(Math.max(1,Math.ceil((access.trialEnd-now)/864e5)));
+    return "";
+  }
+  function showPaywall(u){
+    $("#pwMail").textContent=u.email||"";
+    $("#paywall").style.display="flex";$("#pwSupport").style.display=SUPPORT_URL?"":"none";
+    resetScroll();
+  }
+  $("#pwMail").onclick=()=>{try{navigator.clipboard.writeText($("#pwMail").textContent);toast(t().copied);}catch(e){}};
+  $("#pwPay").onclick=()=>{if(PAY_URL)location.href=PAY_URL;else toast(t().pwNoPay);};
+  $("#pwSupport").onclick=()=>{if(SUPPORT_URL)location.href=SUPPORT_URL;};
+  $("#pwLogout").onclick=()=>fbAuth.signOut().then(()=>location.reload());
+  // Автопроверка: как только вы откроете доступ, экран оплаты сам исчезнет
+  async function recheck(){
+    const u=fbAuth.currentUser;if(!u||$("#paywall").style.display!=="flex")return;
+    if(await checkAccess(u)){$("#paywall").style.display="none";toast(t().pwOk);start();}
+  }
+  setInterval(recheck,30000);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")recheck();});
+  fbAuth.onAuthStateChanged(async u=>{
+    if(!u){$("#intro").style.display="flex";$("#paywall").style.display="none";return;}
+    $("#intro").style.display="none";resetScroll();
+    const ok=await checkAccess(u);
+    if(ok)start();else showPaywall(u);
   });
+  setInterval(async()=>{
+    const u=fbAuth.currentUser;if(!u)return;
+    if(!(await checkAccess(u)))showPaywall(u);
+  },3600000);
   $("#acct").onclick=()=>{
     const u=fbAuth.currentUser;
-    openSheet('<h2></h2><p id="accMail"></p><div class="row"><button class="btn red" id="logout"></button><button class="btn sec" id="closeSheet">✕</button></div>');
-    $("#sheetBody h2").textContent=t().account;$("#accMail").textContent=u?u.email:"";
+    openSheet('<h2></h2><p id="accMail"></p><p id="accStatus" style="color:var(--accent);font-weight:600"></p><div class="row"><button class="btn red" id="logout"></button><button class="btn sec" id="closeSheet">✕</button></div>');
+    $("#sheetBody h2").textContent=t().account;$("#accMail").textContent=u?u.email:"";$("#accStatus").textContent=statusLine();
     $("#logout").textContent=t().logout;
     $("#logout").onclick=()=>fbAuth.signOut().then(()=>location.reload());
     $("#closeSheet").onclick=closeSheet;
   };
 }
+
+/* iPhone: после закрытия клавиатуры возвращаем экран на место */
+function resetScroll(){if(window.scrollY||document.documentElement.scrollTop||document.body.scrollTop){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;}}
+document.addEventListener("focusout",()=>setTimeout(resetScroll,60));
+if(window.visualViewport)window.visualViewport.addEventListener("resize",()=>{const a=document.activeElement;if(!a||(a.tagName!=="INPUT"))resetScroll();});
+window.addEventListener("orientationchange",()=>setTimeout(resetScroll,300));
 
 applyLang();
 })();
