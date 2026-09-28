@@ -180,6 +180,9 @@ const TRIAL_DAYS=7;
 const PAY_URL="https://t.me/omoo_0000";      // оплата — через чат в Telegram
 const SUPPORT_URL="https://t.me/omoo_0000";  // поддержка — Telegram
 
+// Реферальная ссылка: запоминаем, кто пригласил
+try{const r=new URLSearchParams(location.search).get("ref");if(r&&/^[A-Za-z0-9]{4,16}$/.test(r))localStorage.setItem("tochka.ref",r);}catch(e){}
+
 // Статистика (Google Analytics в Firebase)
 let an=null;
 function track(name,params){try{if(an)an.logEvent(name,params||{});}catch(e){}}
@@ -203,6 +206,10 @@ const T={
   copied:"Пошту скопійовано",
   trialLeft:(n)=>"Пробний період: залишилось "+n+" "+(n===1?"день":n<5?"дні":"днів"),
   paidTill:(d)=>"Підписка активна до "+d,
+  refTitle:"💸 Заробляйте з «Точкою»",refText:"Отримуйте 30% з кожної оплати друзів, які зареєструються за вашим посиланням — щомісяця, поки вони платять.",
+  refBal:(b,p)=>"Баланс: "+b+" грн · виведено: "+p+" грн",refMin:"Вивід від 200 грн",refOut:"💸 Вивести",
+  refOutMsg:(e,b)=>"Хочу вивести реферальні "+b+" грн. Мій акаунт: "+e,
+  refBtn:"📤 Поділитися посиланням",refCopied:"Посилання скопійовано",refShare:"Навігатор, який не губить тебе під час тривоги 📍 7 днів безкоштовно:",
   searchPh:"Куди їдемо? Адреса або місце",
   lead:"Навігатор, який не губить вас під час тривоги, коли глушать і підміняють GPS.",
   f1:"Пошук адрес і місць",f2:"Маршрути з голосовими підказками",f3:"Відкидає фальшиві координати",
@@ -239,6 +246,10 @@ const T={
   copied:"Почта скопирована",
   trialLeft:(n)=>"Пробный период: осталось "+n+" "+(n===1?"день":n<5?"дня":"дней"),
   paidTill:(d)=>"Подписка активна до "+d,
+  refTitle:"💸 Зарабатывайте с «Точкой»",refText:"Получайте 30% с каждой оплаты друзей, которые зарегистрируются по вашей ссылке — каждый месяц, пока они платят.",
+  refBal:(b,p)=>"Баланс: "+b+" грн · выведено: "+p+" грн",refMin:"Вывод от 200 грн",refOut:"💸 Вывести",
+  refOutMsg:(e,b)=>"Хочу вывести реферальные "+b+" грн. Мой аккаунт: "+e,
+  refBtn:"📤 Поделиться ссылкой",refCopied:"Ссылка скопирована",refShare:"Навигатор, который не теряет тебя во время тревоги 📍 7 дней бесплатно:",
   searchPh:"Куда едем? Адрес или место",
   lead:"Навигатор, который не теряет вас во время тревоги, когда глушат и подменяют GPS.",
   f1:"Поиск адресов и мест",f2:"Маршруты с голосовыми подсказками",f3:"Отбрасывает ложные координаты",
@@ -611,7 +622,7 @@ if(fbAuth){
   };
   let db=null;try{db=firebase.firestore();}catch(e){}
   const FORCE_PAYWALL=new URLSearchParams(location.search).has("paywall"); // просмотр экрана оплаты: ?paywall=1
-  const access={trialEnd:0,paidUntil:0};
+  const access={trialEnd:0,paidUntil:0,earned:0,paidOut:0};
   const toMs=v=>!v?0:(v.toDate?v.toDate().getTime():new Date(v).getTime()||0);
   async function checkAccess(u){
     access.trialEnd=new Date(u.metadata.creationTime).getTime()+TRIAL_DAYS*864e5;
@@ -622,6 +633,7 @@ if(fbAuth){
       if(db){
         const d=await db.collection("subs").doc((u.email||"").toLowerCase()).get();
         access.paidUntil=d.exists?toMs(d.data().paidUntil):0;
+        access.earned=d.exists?(+d.data().earned||0):0;access.paidOut=d.exists?(+d.data().paidOut||0):0;
         try{localStorage.setItem(key,String(access.paidUntil));}catch(e){}
       }
     }catch(e){access.paidUntil=cached;}
@@ -656,13 +668,16 @@ if(fbAuth){
   function touch(u){
     if(!db||!u||!u.email||Date.now()-lastTouch<600000)return;lastTouch=Date.now();
     const ua=navigator.userAgent,device=/iPhone|iPad|iPod/.test(ua)?"iOS":/Android/.test(ua)?"Android":"Other";
-    const em=u.email.toLowerCase();
-    db.collection("users").doc(em).set({
+    const em=u.email.toLowerCase(),code=u.uid.slice(0,8);
+    const data={
       email:em,
       createdAt:firebase.firestore.Timestamp.fromDate(new Date(u.metadata.creationTime)),
       lastSeen:firebase.firestore.FieldValue.serverTimestamp(),
-      lang:lang,device:device
-    },{merge:true}).catch(()=>{});
+      lang:lang,device:device,code:code
+    };
+    let ref=null;try{ref=localStorage.getItem("tochka.ref");}catch(e){}
+    if(ref&&ref!==code&&Date.now()-new Date(u.metadata.creationTime).getTime()<15*60000)data.ref=ref;
+    db.collection("users").doc(em).set(data,{merge:true}).catch(()=>{});
   }
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&fbAuth.currentUser)touch(fbAuth.currentUser);});
   fbAuth.onAuthStateChanged(async u=>{
@@ -679,8 +694,20 @@ if(fbAuth){
   },3600000);
   $("#acct").onclick=()=>{
     const u=fbAuth.currentUser;
-    openSheet('<h2></h2><p id="accMail"></p><p id="accStatus" style="color:var(--accent);font-weight:600"></p><div class="row"><button class="btn red" id="logout"></button><button class="btn sec" id="closeSheet">✕</button></div>');
+    openSheet('<h2></h2><p id="accMail"></p><p id="accStatus" style="color:var(--accent);font-weight:600"></p><div class="trial" style="text-align:left;margin-bottom:14px"><div id="refTitle"></div><div id="refText" style="font-weight:500;font-size:14px;margin:6px 0 10px;color:var(--text)"></div><div id="refBal" style="font-size:15px;margin-bottom:10px"></div><button class="btn" id="refBtn" style="width:100%"></button><button class="btn sec" id="refOut" style="width:100%;margin-top:8px"></button></div><div class="row"><button class="btn red" id="logout"></button><button class="btn sec" id="closeSheet">✕</button></div>');
     $("#sheetBody h2").textContent=t().account;$("#accMail").textContent=u?u.email:"";$("#accStatus").textContent=statusLine();
+    $("#refTitle").textContent=t().refTitle;$("#refText").textContent=t().refText;$("#refBtn").textContent=t().refBtn;
+    const refLink=location.origin+location.pathname+"?ref="+(u?u.uid.slice(0,8):"");
+    const bal=Math.max(0,Math.round(access.earned-access.paidOut));
+    $("#refBal").textContent=t().refBal(bal,Math.round(access.paidOut));
+    $("#refOut").textContent=bal>=200?t().refOut+" "+bal+" грн":t().refMin;
+    $("#refOut").disabled=bal<200;
+    $("#refOut").onclick=()=>{track("ref_withdraw");location.href="https://t.me/omoo_0000?text="+encodeURIComponent(t().refOutMsg(u?u.email:"",bal));};
+    $("#refBtn").onclick=async()=>{
+      track("ref_share");
+      if(navigator.share){try{await navigator.share({title:"Точка",text:t().refShare,url:refLink});return;}catch(e){if(e&&e.name==="AbortError")return;}}
+      try{await navigator.clipboard.writeText(refLink);toast(t().refCopied);}catch(e){toast(refLink);}
+    };
     $("#logout").textContent=t().logout;
     $("#logout").onclick=()=>fbAuth.signOut().then(()=>location.reload());
     $("#closeSheet").onclick=closeSheet;
