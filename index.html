@@ -157,6 +157,7 @@ html,body{position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
 <script>
 (function(){
 "use strict";
@@ -170,13 +171,20 @@ const FIREBASE_CONFIG={
   projectId:"tochka-cabf3",
   storageBucket:"tochka-cabf3.firebasestorage.app",
   messagingSenderId:"1025615948664",
-  appId:"1:1025615948664:web:4aa046116cd6f685acf68d"
+  appId:"1:1025615948664:web:4aa046116cd6f685acf68d",
+  measurementId:"G-ZT5Y2YNS8B"
 };
 
 // Подписка
 const TRIAL_DAYS=7;
 const PAY_URL="https://t.me/omoo_0000";      // оплата — через чат в Telegram
 const SUPPORT_URL="https://t.me/omoo_0000";  // поддержка — Telegram
+
+// Статистика (Google Analytics в Firebase)
+let an=null;
+function track(name,params){try{if(an)an.logEvent(name,params||{});}catch(e){}}
+const trackedOnce={};
+function trackOnce(name,params){if(trackedOnce[name])return;trackedOnce[name]=1;track(name,params);}
 
 const CFG={maxSpeed:70,drMax:120000,bbox:[22,44,40.3,52.5],center:[30.7233,46.4825],
   style:"https://tiles.openfreemap.org/styles/liberty",
@@ -364,6 +372,7 @@ function currentDir(){
 }
 function publish(p,acc,src){
   L.pos=p;L.acc=acc;L.src=src;
+  if(src==="wifi")trackOnce("gps_wifi_mode");else if(src==="dr")trackOnce(L.state==="spoof"?"gps_spoof_rejected":"gps_dead_reckoning");
   if(!meAdded){meMarker.setLngLat(p).addTo(map);meAdded=true;map.jumpTo({center:p,zoom:16});follow=true;$("#locate").classList.add("on");}
   meMarker.setLngLat(p);
   meEl.className="me"+(src==="dr"?" dr":src==="wifi"?" wifi":"");
@@ -460,7 +469,7 @@ async function buildRoute(isReroute){
     if(j.code!=="Ok"||!j.routes||!j.routes.length){toast(t().noRoute);return;}
     setRoute(j.routes[0]);
     if(isReroute){nav.step=1;nav.said={};speak(t().rerouted);}
-    else showRouteSheet();
+    else{showRouteSheet();track("route_built");}
   }catch(e){toast(t().noRouteNet);}
 }
 function setRoute(rt){
@@ -523,6 +532,7 @@ function speak(txt){
 $("#voice").onclick=()=>{voiceOn=!voiceOn;$("#voice").textContent=voiceOn?"🔊":"🔇";if(voiceOn)speak(t().voiceOn);};
 
 function startNav(){
+  track("nav_start");
   nav.active=true;nav.step=1;nav.said={};follow=true;$("#locate").classList.add("on");
   $("#searchBox").style.display="none";$("#results").style.display="none";$("#banner").style.display="flex";
   openSheet('<div class="row" style="align-items:center"><div style="flex:1"><div class="big" id="nEta">—</div><p id="nRem" style="margin:0">—</p></div><button class="btn red" id="stopNav" style="flex:0 0 auto"></button></div>');
@@ -581,7 +591,7 @@ $("#startBtn").onclick=()=>{reqOrient();$("#intro").style.display="none";start()
 
 /* ================= Регистрация (Firebase) ================= */
 let fbAuth=null;
-try{if(FIREBASE_CONFIG&&window.firebase){firebase.initializeApp(FIREBASE_CONFIG);fbAuth=firebase.auth();}}catch(e){fbAuth=null;}
+try{if(FIREBASE_CONFIG&&window.firebase){firebase.initializeApp(FIREBASE_CONFIG);fbAuth=firebase.auth();try{an=firebase.analytics();}catch(e){}}}catch(e){fbAuth=null;}
 if(fbAuth){
   $("#startBtn").style.display="none";$("#auth").style.display="flex";$("#acct").style.display="flex";
   const errMsg=c=>t().errs[c]||(t().err+c);
@@ -590,7 +600,7 @@ if(fbAuth){
     reqOrient();
     const e=$("#email").value.trim(),p=$("#pass").value;
     $("#authBtn").disabled=true;$("#authErr").textContent="";
-    try{if(authMode==="login")await fbAuth.signInWithEmailAndPassword(e,p);else await fbAuth.createUserWithEmailAndPassword(e,p);}
+    try{if(authMode==="login"){await fbAuth.signInWithEmailAndPassword(e,p);track("login",{method:"email"});}else{await fbAuth.createUserWithEmailAndPassword(e,p);track("sign_up",{method:"email"});}}
     catch(err){$("#authErr").textContent=errMsg(err.code);}
     $("#authBtn").disabled=false;
   };
@@ -600,6 +610,7 @@ if(fbAuth){
     catch(err){$("#authErr").textContent=errMsg(err.code);}
   };
   let db=null;try{db=firebase.firestore();}catch(e){}
+  const FORCE_PAYWALL=new URLSearchParams(location.search).has("paywall"); // просмотр экрана оплаты: ?paywall=1
   const access={trialEnd:0,paidUntil:0};
   const toMs=v=>!v?0:(v.toDate?v.toDate().getTime():new Date(v).getTime()||0);
   async function checkAccess(u){
@@ -626,22 +637,39 @@ if(fbAuth){
   function showPaywall(u){
     $("#pwMail").textContent=u.email||"";
     $("#paywall").style.display="flex";$("#pwSupport").style.display=SUPPORT_URL?"":"none";
+    if(!FORCE_PAYWALL)trackOnce("paywall_shown");
     resetScroll();
   }
   $("#pwMail").onclick=()=>{try{navigator.clipboard.writeText($("#pwMail").textContent);toast(t().copied);}catch(e){}};
-  $("#pwPay").onclick=()=>{if(PAY_URL)location.href=PAY_URL;else toast(t().pwNoPay);};
+  $("#pwPay").onclick=()=>{track("pay_click");if(PAY_URL)location.href=PAY_URL;else toast(t().pwNoPay);};
   $("#pwSupport").onclick=()=>{if(SUPPORT_URL)location.href=SUPPORT_URL;};
   $("#pwLogout").onclick=()=>fbAuth.signOut().then(()=>location.reload());
   // Автопроверка: как только вы откроете доступ, экран оплаты сам исчезнет
   async function recheck(){
-    const u=fbAuth.currentUser;if(!u||$("#paywall").style.display!=="flex")return;
+    const u=fbAuth.currentUser;if(FORCE_PAYWALL||!u||$("#paywall").style.display!=="flex")return;
     if(await checkAccess(u)){$("#paywall").style.display="none";toast(t().pwOk);start();}
   }
   setInterval(recheck,30000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")recheck();});
+  // Отметка «пользователь заходил» — для админки
+  let lastTouch=0;
+  function touch(u){
+    if(!db||!u||!u.email||Date.now()-lastTouch<600000)return;lastTouch=Date.now();
+    const ua=navigator.userAgent,device=/iPhone|iPad|iPod/.test(ua)?"iOS":/Android/.test(ua)?"Android":"Other";
+    const em=u.email.toLowerCase();
+    db.collection("users").doc(em).set({
+      email:em,
+      createdAt:firebase.firestore.Timestamp.fromDate(new Date(u.metadata.creationTime)),
+      lastSeen:firebase.firestore.FieldValue.serverTimestamp(),
+      lang:lang,device:device
+    },{merge:true}).catch(()=>{});
+  }
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&fbAuth.currentUser)touch(fbAuth.currentUser);});
   fbAuth.onAuthStateChanged(async u=>{
     if(!u){$("#intro").style.display="flex";$("#paywall").style.display="none";return;}
+    touch(u);
     $("#intro").style.display="none";resetScroll();
+    if(FORCE_PAYWALL){await checkAccess(u);showPaywall(u);return;}
     const ok=await checkAccess(u);
     if(ok)start();else showPaywall(u);
   });
