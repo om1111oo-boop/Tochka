@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Точка Админ">
+<title>Точка — админка</title>
+<style>
+:root{--bg:#0f1115;--card:#1b1e25;--line:#2c3039;--text:#f3f4f6;--muted:#9ca3af;--accent:#4f8cff;--green:#22c55e;--orange:#f59e0b;--red:#ef4444;
+  --top:env(safe-area-inset-top,0px);--bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding:calc(var(--top) + 16px) 16px calc(var(--bottom) + 30px)}
+h1{font-size:26px;margin:4px 0 16px;display:flex;justify-content:space-between;align-items:center}
+h2{font-size:18px;margin:22px 0 10px}
+.card{background:var(--card);border-radius:16px;padding:16px}
+input{width:100%;height:50px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--text);padding:0 14px;font-size:17px;outline:0}
+input:focus{border-color:var(--accent)}
+.btn{border:0;border-radius:12px;padding:13px 16px;font-size:16px;font-weight:700;background:var(--accent);color:#fff;cursor:pointer}
+.btn.sm{padding:9px 12px;font-size:14px;border-radius:10px}
+.btn.ghost{background:var(--line);color:var(--text)}
+.btn.red{background:var(--red)}
+.btn:disabled{opacity:.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--card);border-radius:14px;padding:14px}
+.stat .n{font-size:30px;font-weight:800}
+.stat .l{font-size:13px;color:var(--muted);margin-top:2px}
+.user{background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px}
+.user .em{font-weight:700;font-size:16px;word-break:break-all}
+.user .meta{font-size:13px;color:var(--muted);margin:6px 0 10px;line-height:1.5}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
+.b-paid{background:rgba(34,197,94,.15);color:var(--green)}
+.b-trial{background:rgba(79,140,255,.15);color:var(--accent)}
+.b-off{background:rgba(239,68,68,.15);color:var(--red)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.col{display:flex;flex-direction:column;gap:10px}
+.muted{color:var(--muted);font-size:14px;line-height:1.5}
+.err{color:var(--red);font-size:14px;min-height:18px}
+a{color:var(--accent)}
+#toast{position:fixed;left:50%;bottom:calc(var(--bottom) + 24px);transform:translateX(-50%);background:#000c;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;display:none;z-index:9}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<div id="loginView" class="hidden">
+  <h1>📍 Точка · админка</h1>
+  <div class="card col">
+    <input id="email" type="email" placeholder="Почта администратора" autocomplete="email">
+    <input id="pass" type="password" placeholder="Пароль" autocomplete="current-password">
+    <div class="err" id="loginErr"></div>
+    <button class="btn" id="loginBtn">Войти</button>
+  </div>
+</div>
+
+<div id="denyView" class="hidden">
+  <h1>📍 Точка · админка</h1>
+  <div class="card col">
+    <div>Нет доступа. Эта страница только для администратора.</div>
+    <button class="btn ghost" id="logout1">Выйти</button>
+  </div>
+</div>
+
+<div id="adminView" class="hidden">
+  <h1><span>📍 Админка</span><button class="btn sm ghost" id="refresh">↻ Обновить</button></h1>
+
+  <div class="grid">
+    <div class="stat"><div class="n" id="sTotal">—</div><div class="l">Зарегистрировано</div></div>
+    <div class="stat"><div class="n" id="sToday">—</div><div class="l">Заходили за 24 ч</div></div>
+    <div class="stat"><div class="n" id="sWeek">—</div><div class="l">Заходили за 7 дней</div></div>
+    <div class="stat"><div class="n" id="sNew">—</div><div class="l">Новых за 7 дней</div></div>
+    <div class="stat"><div class="n" id="sTrial" style="color:var(--accent)">—</div><div class="l">На пробном периоде</div></div>
+    <div class="stat"><div class="n" id="sPaid" style="color:var(--green)">—</div><div class="l">Платят</div></div>
+    <div class="stat"><div class="n" id="sOff" style="color:var(--red)">—</div><div class="l">Доступ закончился</div></div>
+    <div class="stat"><div class="n" id="sMoney">—</div><div class="l">Доход в месяц, грн</div></div>
+  </div>
+  <p class="muted">Посещения без регистрации смотрите в <a href="https://console.firebase.google.com/project/tochka-cabf3/analytics" target="_blank">Firebase Analytics</a>.</p>
+
+  <h2>Выдать доступ по почте</h2>
+  <div class="card col">
+    <input id="grantEmail" type="email" placeholder="почта пользователя">
+    <div class="row">
+      <button class="btn sm" data-grant="1">+1 месяц</button>
+      <button class="btn sm" data-grant="3">+3 месяца</button>
+      <button class="btn sm" data-grant="12">+1 год</button>
+    </div>
+  </div>
+
+  <h2>Пользователи</h2>
+  <input id="search" type="search" placeholder="Поиск по почте">
+  <div class="row" style="margin:10px 0">
+    <button class="btn sm ghost" data-filter="all">Все</button>
+    <button class="btn sm ghost" data-filter="trial">Пробный</button>
+    <button class="btn sm ghost" data-filter="paid">Платят</button>
+    <button class="btn sm ghost" data-filter="off">Закончился</button>
+  </div>
+  <div id="list"></div>
+
+  <button class="btn ghost" id="logout2" style="width:100%;margin-top:14px">Выйти</button>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+"use strict";
+const ADMIN_EMAIL="om1111oo@icloud.com";
+const PRICE=100, TRIAL_DAYS=7, DAY=864e5;
+firebase.initializeApp({
+  apiKey:"AIzaSyBiqFv9wdmUMCKO-G--jrp40eMktQLXirs",
+  authDomain:"tochka-cabf3.firebaseapp.com",
+  projectId:"tochka-cabf3",
+  storageBucket:"tochka-cabf3.firebasestorage.app",
+  messagingSenderId:"1025615948664",
+  appId:"1:1025615948664:web:4aa046116cd6f685acf68d"
+});
+const auth=firebase.auth(), db=firebase.firestore();
+const $=s=>document.querySelector(s);
+const show=id=>["loginView","denyView","adminView"].forEach(v=>$("#"+v).classList.toggle("hidden",v!==id));
+function toast(t){const e=$("#toast");e.textContent=t;e.style.display="block";clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display="none",2500);}
+const ms=v=>!v?0:(v.toDate?v.toDate().getTime():new Date(v).getTime()||0);
+const fmtDate=t=>t?new Date(t).toLocaleDateString("ru-RU"):"—";
+function ago(t){
+  if(!t)return "ещё не заходил в новой версии";
+  const d=Date.now()-t;
+  if(d<36e5)return Math.max(1,Math.round(d/6e4))+" мин назад";
+  if(d<DAY)return Math.round(d/36e5)+" ч назад";
+  return Math.round(d/DAY)+" дн. назад";
+}
+
+let users=[],filter="all";
+
+async function load(){
+  $("#refresh").disabled=true;
+  try{
+    const [uSnap,sSnap]=await Promise.all([db.collection("users").get(),db.collection("subs").get()]);
+    const map={};
+    uSnap.forEach(d=>{const x=d.data();map[d.id]={email:d.id,created:ms(x.createdAt),seen:ms(x.lastSeen),device:x.device||"",lang:x.lang||"",paid:0};});
+    sSnap.forEach(d=>{const x=d.data();if(!map[d.id])map[d.id]={email:d.id,created:0,seen:0,device:"",lang:"",paid:0};map[d.id].paid=ms(x.paidUntil);});
+    users=Object.values(map).map(u=>{
+      const now=Date.now(),trialEnd=u.created?u.created+TRIAL_DAYS*DAY:0;
+      u.trialEnd=trialEnd;
+      u.status=u.paid>now?"paid":trialEnd>now?"trial":"off";
+      return u;
+    }).sort((a,b)=>(b.seen||b.created)-(a.seen||a.created));
+    renderStats();renderList();
+  }catch(e){toast("Ошибка загрузки: "+(e.code||e.message));}
+  $("#refresh").disabled=false;
+}
+
+function renderStats(){
+  const now=Date.now();
+  $("#sTotal").textContent=users.filter(u=>u.created).length;
+  $("#sToday").textContent=users.filter(u=>u.seen>now-DAY).length;
+  $("#sWeek").textContent=users.filter(u=>u.seen>now-7*DAY).length;
+  $("#sNew").textContent=users.filter(u=>u.created>now-7*DAY).length;
+  const paid=users.filter(u=>u.status==="paid").length;
+  $("#sTrial").textContent=users.filter(u=>u.status==="trial").length;
+  $("#sPaid").textContent=paid;
+  $("#sOff").textContent=users.filter(u=>u.status==="off").length;
+  $("#sMoney").textContent=(paid*PRICE).toLocaleString("ru-RU");
+}
+
+function renderList(){
+  const q=$("#search").value.trim().toLowerCase();
+  const list=$("#list");list.innerHTML="";
+  const items=users.filter(u=>(filter==="all"||u.status===filter)&&(!q||u.email.includes(q)));
+  if(!items.length){list.innerHTML='<div class="muted">Никого не найдено</div>';return;}
+  items.forEach(u=>{
+    const el=document.createElement("div");el.className="user";
+    const badge=u.status==="paid"?'<span class="badge b-paid">Оплачено до '+fmtDate(u.paid)+'</span>'
+      :u.status==="trial"?'<span class="badge b-trial">Пробный до '+fmtDate(u.trialEnd)+'</span>'
+      :'<span class="badge b-off">Доступ закончился</span>';
+    el.innerHTML='<div class="em"></div><div class="meta"></div>'+badge+
+      '<div class="row" style="margin-top:10px"><button class="btn sm" data-m="1">+1 мес</button><button class="btn sm" data-m="12">+1 год</button>'+
+      (u.paid>Date.now()?'<button class="btn sm red" data-m="0">Отключить</button>':'')+'</div>';
+    el.querySelector(".em").textContent=u.email;
+    el.querySelector(".meta").textContent="Регистрация: "+fmtDate(u.created)+" · Заходил: "+ago(u.seen)+(u.device?" · "+u.device:"");
+    el.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>setAccess(u.email,+b.dataset.m,b));
+    list.appendChild(el);
+  });
+}
+
+async function setAccess(email,months,btn){
+  email=(email||"").trim().toLowerCase();
+  if(!/^\S+@\S+\.\S+$/.test(email)){toast("Введите правильную почту");return;}
+  if(months===0&&!confirm("Отключить подписку для "+email+"?"))return;
+  if(btn)btn.disabled=true;
+  try{
+    const ref=db.collection("subs").doc(email);
+    let until;
+    if(months===0){until=new Date(Date.now()-60000);}
+    else{
+      const cur=await ref.get();
+      const base=Math.max(Date.now(),cur.exists?ms(cur.data().paidUntil):0);
+      const d=new Date(base);d.setMonth(d.getMonth()+months);until=d;
+    }
+    await ref.set({paidUntil:firebase.firestore.Timestamp.fromDate(until)},{merge:true});
+    toast(months===0?"Подписка отключена":"Доступ до "+until.toLocaleDateString("ru-RU"));
+    await load();
+  }catch(e){toast("Ошибка: "+(e.code||e.message));}
+  if(btn)btn.disabled=false;
+}
+
+document.querySelectorAll("[data-grant]").forEach(b=>b.onclick=async()=>{
+  await setAccess($("#grantEmail").value,+b.dataset.grant,b);$("#grantEmail").value="";
+});
+document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{
+  filter=b.dataset.filter;
+  document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("ghost",x!==b));
+  renderList();
+});
+$("#search").addEventListener("input",renderList);
+$("#refresh").onclick=load;
+$("#loginBtn").onclick=async()=>{
+  $("#loginErr").textContent="";
+  try{await auth.signInWithEmailAndPassword($("#email").value.trim(),$("#pass").value);}
+  catch(e){$("#loginErr").textContent="Неверная почта или пароль";}
+};
+$("#logout1").onclick=$("#logout2").onclick=()=>auth.signOut();
+
+auth.onAuthStateChanged(u=>{
+  if(!u)return show("loginView");
+  if((u.email||"").toLowerCase()!==ADMIN_EMAIL)return show("denyView");
+  show("adminView");load();
+});
+})();
+</script>
+</body>
+</html>
